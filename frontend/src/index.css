@@ -1,0 +1,208 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-primary: #0b1329;
+    --bg-card: #111c38;
+    --bg-secondary: #1a274c;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --border-color: #1e293b;
+  }
+
+  body {
+    @apply font-sans antialiased text-slate-100 bg-slate-950 selection:bg-cyan-500 selection:text-white transition-colors duration-300;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Radar pulse animation for IMD scientific theme */
+@keyframes radar-sweep {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animate-radar {
+  animation: radar-sweep 8s linear infinite;
+}
+
+/* Smooth Fade & Slide Animation for Dynamic Content */
+@keyframes fadeInSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeInSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ==========================================================================
+   LIGHT MODE OVERRIDES (HEADER & SIDEBAR ARE PURE WHITE)
+   ========================================================================== */
+
+.light-mode {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+/* Header & Navbar Light Mode */
+.light-mode header {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+.light-mode header input {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+.light-mode header .bg-slate-900\/90,
+.light-mode header .bg-slate-900 {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+}
+
+.light-mode header .text-white {
+  color: #0f172a !important;
+}
+
+.light-mode header .text-slate-400 {
+  color: #64748b !important;
+}
+
+.light-mode header .text-slate-300 {
+  color: #334155 !important;
+}
+
+/* Sidebar Light Mode */
+.light-mode aside {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  box-shadow: 1px 0 3px 0 rgba(0, 0, 0, 0.02) !important;
+}
+
+.light-mode aside .bg-slate-900\/60,
+.light-mode aside .bg-slate-900\/40,
+.light-mode aside .bg-slate-900 {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+}
+
+.light-mode aside .text-slate-400 {
+  color: #475569 !important;
+}
+
+.light-mode aside .text-slate-300,
+.light-mode aside .text-slate-200 {
+  color: #1e293b !important;
+}
+
+.light-mode aside button:hover {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+.light-mode aside .border-slate-800,
+.light-mode aside .border-slate-800\/80,
+.light-mode aside .border-slate-800\/50 {
+  border-color: #e2e8f0 !important;
+}
+
+/* Main Dashboard Light Mode */
+.light-mode main {
+  background-color: #f8fafc !important;
+}
+
+.light-mode main .bg-slate-900,
+.light-mode main .bg-slate-900\/60,
+.light-mode main .bg-slate-900\/80 {
+  background-color: #ffffff !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+}
+
+.light-mode main .bg-slate-950,
+.light-mode main .bg-slate-950\/80,
+.light-mode main .bg-slate-950\/60,
+.light-mode main .bg-slate-950\/50 {
+  background-color: #f1f5f9 !important;
+}
+
+.light-mode main .border-slate-800,
+.light-mode main .border-slate-800\/80,
+.light-mode main .border-slate-800\/60 {
+  border-color: #e2e8f0 !important;
+}
+
+.light-mode main .text-white {
+  color: #0f172a !important;
+}
+
+.light-mode main .text-slate-200 {
+  color: #1e293b !important;
+}
+
+.light-mode main .text-slate-300 {
+  color: #334155 !important;
+}
+
+.light-mode main .text-slate-400 {
+  color: #64748b !important;
+}
+
+.light-mode main input,
+.light-mode main select,
+.light-mode main textarea {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+/* Hero Left Panel on Login Page always stays dark & high contrast */
+.hero-left-panel {
+  background-color: #030712 !important;
+  color: #ffffff !important;
+}
+
+.hero-left-panel h1,
+.hero-left-panel h2,
+.hero-left-panel p,
+.hero-left-panel span {
+  color: #ffffff;
+}
+
+.hero-left-panel .text-cyan-400 {
+  color: #38bdf8 !important;
+}
+
+.hero-left-panel .text-slate-300 {
+  color: #cbd5e1 !important;
+}
