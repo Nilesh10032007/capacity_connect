@@ -4,10 +4,9 @@ import { authService } from '../services/api/authService';
 
 interface AuthContextType {
   user: User | null;
-  role: UserRole;
+  role: UserRole | null;
   isAuthenticated: boolean;
-  login: (selectedRole: UserRole, email?: string, password?: string) => Promise<void>;
-  switchRole: (newRole: UserRole) => Promise<void>;
+  login: (email?: string, password?: string) => Promise<void>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => Promise<void>;
 }
@@ -15,33 +14,41 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [role, setRole] = useState<UserRole>('trainee');
+  const [role, setRole] = useState<UserRole | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Initial default user load
-    authService.getCurrentUser(role).then((usr) => {
-      setUser(usr);
-    });
+    const token = localStorage.getItem('token');
+    if (token) {
+      authService.getCurrentUser().then((usr) => {
+        setUser(usr);
+        setRole(usr.role);
+        setIsAuthenticated(true);
+      }).catch(() => {
+        logout();
+      }).finally(() => {
+        setLoading(false);
+      });
+    } else {
+      setLoading(false);
+    }
   }, []);
 
-  const login = async (selectedRole: UserRole, email?: string, password?: string) => {
-    const loggedInUser = await authService.login(selectedRole, email, password);
-    setRole(selectedRole);
+  const login = async (email?: string, password?: string) => {
+    const { token, user: loggedInUser, role: newRole } = await authService.login(email, password);
+    localStorage.setItem('token', token);
+    setRole(newRole);
     setUser(loggedInUser);
     setIsAuthenticated(true);
   };
 
-  const switchRole = async (newRole: UserRole) => {
-    const newUser = await authService.getCurrentUser(newRole);
-    setRole(newRole);
-    setUser(newUser);
-  };
-
   const logout = () => {
+    localStorage.removeItem('token');
     setIsAuthenticated(false);
     setUser(null);
+    setRole(null);
   };
 
   const updateUser = async (updates: Partial<User>) => {
@@ -51,8 +58,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  if (loading) return null;
+
   return (
-    <AuthContext.Provider value={{ user, role, isAuthenticated, login, switchRole, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, role, isAuthenticated, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

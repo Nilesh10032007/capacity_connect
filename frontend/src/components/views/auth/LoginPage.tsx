@@ -33,8 +33,8 @@ interface RoleTextContent {
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
   const [selectedRole, setSelectedRole] = useState<UserRole>('trainee');
-  const [email, setEmail] = useState('ananya.sharma@imd.gov.in');
-  const [password, setPassword] = useState('••••••••••••');
+  const [email, setEmail] = useState('trainee@capacityconnect.com');
+  const [password, setPassword] = useState('Trainee@123');
   const [rememberMe, setRememberMe] = useState(true);
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
@@ -87,16 +87,28 @@ export const LoginPage: React.FC = () => {
 
   const handleRoleSelect = (role: UserRole) => {
     setSelectedRole(role);
-    if (role === 'trainee') setEmail('ananya.sharma@imd.gov.in');
-    else if (role === 'trainer') setEmail('vk.murthy@moes.gov.in');
-    else setEmail('admin.capacity@moes.gov.in');
+    if (role === 'trainee') {
+      setEmail('trainee@capacityconnect.com');
+      setPassword('Trainee@123');
+    } else if (role === 'trainer') {
+      setEmail('trainer@capacityconnect.com');
+      setPassword('Trainer@123');
+    } else {
+      setEmail('admin@capacityconnect.com');
+      setPassword('Admin@123');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    await login(selectedRole, email, password);
-    setIsLoading(false);
+    try {
+      await login(email, password);
+    } catch (error) {
+      alert(error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleForgotSubmit = (e: React.FormEvent) => {

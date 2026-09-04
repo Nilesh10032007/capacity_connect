@@ -1,5 +1,5 @@
 import { Announcement } from '../../types';
-import { MOCK_ANNOUNCEMENTS } from '../mockData';
+import { fetchApi } from './apiClient';
 
 export interface AnalyticsSummary {
   totalTrainees: number;
@@ -14,13 +14,14 @@ export interface AnalyticsSummary {
 
 export const analyticsService = {
   async getOverviewAnalytics(): Promise<AnalyticsSummary> {
+    const data = await fetchApi('/admin/dashboard');
     return {
-      totalTrainees: 485,
-      totalTrainers: 32,
-      activeCourses: 18,
-      completedCourses: 142,
-      totalCertifications: 620,
-      pendingAssessments: 24,
+      totalTrainees: data.totalTrainees,
+      totalTrainers: data.totalTrainers,
+      activeCourses: data.totalCourses,
+      completedCourses: data.activeLearners, // Mapping logic
+      totalCertifications: 620, // Fallback
+      pendingAssessments: 24, // Fallback
       monthlyEnrollments: [
         { month: 'Mar', enrollments: 65, completions: 42 },
         { month: 'Apr', enrollments: 82, completions: 58 },
@@ -40,16 +41,13 @@ export const analyticsService = {
   },
 
   async getAnnouncements(): Promise<Announcement[]> {
-    return MOCK_ANNOUNCEMENTS;
+    return fetchApi('/announcements');
   },
 
-  async createAnnouncement(announcement: Omit<Announcement, 'id' | 'date'>): Promise<Announcement> {
-    const newAnc: Announcement = {
-      ...announcement,
-      id: `anc_${Date.now()}`,
-      date: new Date().toISOString().split('T')[0]
-    };
-    MOCK_ANNOUNCEMENTS.unshift(newAnc);
-    return newAnc;
+  async createAnnouncement(announcement: Partial<Announcement>): Promise<Announcement> {
+    return fetchApi('/announcements', {
+      method: 'POST',
+      body: JSON.stringify(announcement)
+    });
   }
 };
