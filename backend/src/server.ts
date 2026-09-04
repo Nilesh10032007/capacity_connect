@@ -11,3 +11,5 @@ connectDB().then(() => {
     console.log(`Server running on port ${PORT}`);
   });
 });
+
+// Trigger restart

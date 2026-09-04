@@ -1,161 +1,155 @@
-import React, { useState } from 'react';
-import { MOCK_RESOURCES } from '../../../services/mockData';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../../context/AppContext';
 import { Badge } from '../../common/Badge';
-import { Modal } from '../../common/Modal';
-import { FolderPlus, Upload, FileText, Video, Presentation, FileCode, Database, Download } from 'lucide-react';
+import { FolderPlus, Upload, FileText, Video, Presentation, FileCode, Database, Download, FileTerminal, AlignLeft, Loader2, Trash2 } from 'lucide-react';
 import { courseService } from '../../../services/api/courseService';
+import { AssetEditorView } from './AssetEditorView';
 
 export const TrainerLibraryView: React.FC = () => {
   const { showToast } = useApp();
-  const [resources, setResources] = useState(MOCK_RESOURCES);
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [title, setTitle] = useState('');
-  const [type, setType] = useState<'pdf' | 'video' | 'presentation' | 'code' | 'dataset'>('pdf');
-  const [category, setCategory] = useState('Manuals');
+  const [resources, setResources] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const handleUpload = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const newRes = await courseService.uploadResource({
-      title: title || 'Operational_Radar_Dataset_2026.nc',
-      type,
-      fileSize: '18.4 MB',
-      uploadedBy: 'Prof. V. K. Murthy',
-      downloadUrl: '#',
-      category
-    });
-    setResources((prev) => [newRes, ...prev]);
-    setShowUploadModal(false);
-    showToast(`Uploaded ${newRes.title} to Trainer Resource Repository`);
+  const fetchResources = async () => {
+    try {
+      setLoading(true);
+      const res = await courseService.getResources();
+      setResources(res || []);
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to load library resources');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const typeIcons = {
-    pdf: <FileText className="h-4 w-4 text-rose-400" />,
-    video: <Video className="h-4 w-4 text-cyan-400" />,
-    presentation: <Presentation className="h-4 w-4 text-amber-400" />,
-    code: <FileCode className="h-4 w-4 text-emerald-400" />,
-    dataset: <Database className="h-4 w-4 text-purple-400" />
+  useEffect(() => {
+    fetchResources();
+  }, []);
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this resource?')) return;
+    try {
+      await courseService.deleteResource(id);
+      showToast('Resource deleted successfully');
+      setResources(resources.filter(r => (r._id || r.id) !== id));
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to delete resource');
+    }
   };
+
+  const typeIcons: Record<string, React.ReactNode> = {
+    pdf: <FileText className="h-4 w-4 text-rose-500" />,
+    video: <Video className="h-4 w-4 text-cyan-500" />,
+    presentation: <Presentation className="h-4 w-4 text-amber-500" />,
+    code: <FileCode className="h-4 w-4 text-emerald-500" />,
+    script: <FileTerminal className="h-4 w-4 text-indigo-500" />,
+    text: <AlignLeft className="h-4 w-4 text-slate-500" />,
+    dataset: <Database className="h-4 w-4 text-purple-500" />,
+    other: <FileText className="h-4 w-4 text-slate-400" />
+  };
+
+  if (isUploading) {
+    return (
+      <AssetEditorView 
+        onClose={() => setIsUploading(false)} 
+        onSuccess={(newAsset) => {
+          setResources([newAsset, ...resources]);
+          setIsUploading(false);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
         <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <FolderPlus className="h-5 w-5 text-emerald-400" />
+          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <FolderPlus className="h-5 w-5 text-emerald-600" />
             <span>Trainer Content Library & Asset Repository</span>
           </h2>
-          <p className="text-xs text-slate-400">Upload and manage operational manuals, lecture videos, NetCDF datasets, and code notebooks.</p>
+          <p className="text-xs text-slate-500 mt-1">Upload and manage operational manuals, lecture videos, scripts, and code snippets.</p>
         </div>
 
         <button
-          onClick={() => setShowUploadModal(true)}
-          className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-500 transition-all"
+          onClick={() => setIsUploading(true)}
+          className="flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-500 transition-all"
         >
           <Upload className="h-4 w-4" />
           <span>Upload New Asset</span>
         </button>
       </div>
 
-      {/* Resource Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {resources.map((res) => (
-          <div key={res.id} className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <Badge variant="cyan" icon={typeIcons[res.type]}>
-                  {res.type.toUpperCase()}
-                </Badge>
-                <span className="text-[10px] text-slate-500 font-mono">{res.uploadDate}</span>
+      {loading ? (
+        <div className="flex h-64 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+          <span className="ml-3 text-sm text-slate-500 font-semibold">Loading Library Assets...</span>
+        </div>
+      ) : resources.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-12 text-center">
+          <FolderPlus className="mx-auto h-12 w-12 text-slate-400 mb-4" />
+          <h3 className="text-lg font-bold text-slate-700">Library is Empty</h3>
+          <p className="text-sm text-slate-500 mt-1 max-w-md mx-auto">
+            You haven't uploaded any operational assets yet. Click "Upload New Asset" to start building your repository.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {resources.map((res) => (
+            <div key={res._id || res.id} className="rounded-xl border border-slate-200 bg-white p-5 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow group">
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <Badge variant="cyan" icon={typeIcons[res.type] || typeIcons['other']}>
+                    {(res.type || 'UNKNOWN').toUpperCase()}
+                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-slate-500 font-mono font-semibold bg-slate-100 px-2 py-1 rounded">
+                      {new Date(res.uploadDate || res.createdAt).toLocaleDateString()}
+                    </span>
+                    <button 
+                      onClick={() => handleDelete(res._id || res.id)}
+                      className="text-slate-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <h3 className="text-sm font-bold text-slate-800 leading-snug mb-1">{res.title}</h3>
+                <p className="text-xs font-semibold text-emerald-600">{res.category}</p>
               </div>
 
-              <h3 className="text-sm font-bold text-white leading-snug">{res.title}</h3>
-              <p className="text-xs text-slate-400 mt-1">Uploaded by: {res.uploadedBy}</p>
+              <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between">
+                <span className="text-xs font-mono font-semibold text-slate-500 bg-slate-50 px-2 py-1 rounded">{res.fileSize || 'N/A'}</span>
+                
+                {['code', 'script', 'text'].includes(res.type) ? (
+                  <button
+                    onClick={() => showToast(`Viewing Content for ${res.title}`)}
+                    className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-500 hover:underline font-bold"
+                  >
+                    <FileText className="h-4 w-4" />
+                    <span>View Content</span>
+                  </button>
+                ) : (
+                  <a
+                    href={res.fileUrl || res.downloadUrl || '#'}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-500 hover:underline font-bold"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span>Download</span>
+                  </a>
+                )}
+              </div>
             </div>
-
-            <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between">
-              <span className="text-xs font-mono text-slate-400">{res.fileSize}</span>
-              <button
-                onClick={() => showToast(`Downloading ${res.title}`)}
-                className="flex items-center gap-1 text-xs text-cyan-400 hover:underline font-semibold"
-              >
-                <Download className="h-3.5 w-3.5" />
-                <span>Download</span>
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Upload Asset Modal */}
-      <Modal
-        isOpen={showUploadModal}
-        onClose={() => setShowUploadModal(false)}
-        title="Upload Operational Learning Asset"
-        subtitle="Supported formats: PDF, MP4 Video, PPTX, IPYNB, NetCDF"
-      >
-        <form onSubmit={handleUpload} className="space-y-4 text-xs">
-          <div>
-            <label className="block font-semibold text-slate-300 mb-1">Asset Title / File Name</label>
-            <input
-              type="text"
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded border border-slate-800 bg-slate-950 p-2.5 text-white"
-              placeholder="e.g. WRF_Parameterization_Guide_2026.pdf"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold text-slate-300 mb-1">Asset Type</label>
-              <select
-                value={type}
-                onChange={(e) => setType(e.target.value as any)}
-                className="w-full rounded border border-slate-800 bg-slate-950 p-2.5 text-white"
-              >
-                <option value="pdf">PDF Document</option>
-                <option value="video">Video Lecture</option>
-                <option value="presentation">Presentation (PPTX)</option>
-                <option value="code">Code Notebook (IPYNB/Python)</option>
-                <option value="dataset">NetCDF/GRIB Dataset</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-300 mb-1">Category</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full rounded border border-slate-800 bg-slate-950 p-2.5 text-white"
-              >
-                <option value="Manuals">Manuals</option>
-                <option value="Guides">Guides</option>
-                <option value="Code Scripts">Code Scripts</option>
-                <option value="Datasets">Datasets</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Drag and Drop Zone Dummy UI */}
-          <div className="border-2 border-dashed border-slate-800 hover:border-emerald-500/50 rounded-xl p-6 text-center bg-slate-950/60 cursor-pointer">
-            <Upload className="h-8 w-8 text-emerald-400 mx-auto mb-2" />
-            <p className="font-semibold text-slate-200">Drag & drop files here, or browse from computer</p>
-            <span className="text-[10px] text-slate-500">Maximum file size: 500 MB</span>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={() => setShowUploadModal(false)} className="px-3 py-1.5 rounded bg-slate-800 text-slate-400">
-              Cancel
-            </button>
-            <button type="submit" className="px-4 py-1.5 rounded bg-emerald-600 font-bold text-white">
-              Confirm Upload
-            </button>
-          </div>
-        </form>
-      </Modal>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

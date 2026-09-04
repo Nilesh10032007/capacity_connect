@@ -7,7 +7,7 @@ interface ModalProps {
   title: string;
   subtitle?: string;
   children: React.ReactNode;
-  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '4xl';
+  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '4xl' | '7xl' | 'full';
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -40,7 +40,9 @@ export const Modal: React.FC<ModalProps> = ({
     lg: 'max-w-lg',
     xl: 'max-w-xl',
     '2xl': 'max-w-2xl',
-    '4xl': 'max-w-4xl'
+    '4xl': 'max-w-4xl',
+    '7xl': 'max-w-7xl',
+    'full': 'max-w-[95vw] w-full'
   };
 
   return (
@@ -56,7 +58,7 @@ export const Modal: React.FC<ModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 bg-slate-900/90">
           <div>
-            <h3 className="text-lg font-semibold text-white">{title}</h3>
+            <div className="text-lg font-semibold !text-white" style={{ color: '#ffffff' }}>{title}</div>
             {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
           </div>
           <button

@@ -8,7 +8,7 @@ import { authenticateToken, requireRole } from '../middleware/auth';
 // GET /api/trainees/me/skill-gaps
 // Let's import those from competencyController
 
-import { getMyCompetencies, getMySkillGaps, updateMyCompetencyLevel, getCompetencyQuiz } from '../controllers/competencyController';
+import { getMyCompetencies, getMySkillGaps, updateMyCompetencyLevel, getCompetencyQuiz, generatePathwayForSkillGap } from '../controllers/competencyController';
 import { getMyEnrollments } from '../controllers/enrollmentController';
 
 const router = Router();
@@ -18,6 +18,7 @@ router.get('/me/competencies', authenticateToken, requireRole('trainee'), getMyC
 router.post('/me/competencies/level', authenticateToken, requireRole('trainee'), updateMyCompetencyLevel);
 router.post('/me/competencies/generate-quiz', authenticateToken, requireRole('trainee'), getCompetencyQuiz);
 router.get('/me/skill-gaps', authenticateToken, requireRole('trainee'), getMySkillGaps);
+router.post('/me/skill-gaps/pathway', authenticateToken, requireRole('trainee'), generatePathwayForSkillGap);
 router.get('/me/enrollments', authenticateToken, requireRole('trainee'), getMyEnrollments);
 
 export default router;

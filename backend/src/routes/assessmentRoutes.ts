@@ -10,7 +10,8 @@ import {
   getTrainerAssessments,
   getAssessmentQuestionsForTrainer,
   updateAssessmentQuestion,
-  deleteAssessmentQuestion
+  deleteAssessmentQuestion,
+  getAssessmentResponses
 } from '../controllers/assessmentController';
 import { authenticateToken, requireRole } from '../middleware/auth';
 
@@ -25,6 +26,7 @@ router.post('/:id/submit', authenticateToken, requireRole('trainee'), submitAsse
 // Trainer routes
 router.get('/trainer/my', authenticateToken, requireRole('trainer'), getTrainerAssessments);
 router.get('/trainer/:id/questions', authenticateToken, requireRole('trainer'), getAssessmentQuestionsForTrainer);
+router.get('/:id/responses', authenticateToken, requireRole('trainer'), getAssessmentResponses);
 router.post('/create', authenticateToken, requireRole('trainer'), createAssessmentWithQuestions);
 router.post('/ai-generate', authenticateToken, requireRole('trainer'), aiGenerateAssessmentQuestions);
 router.put('/questions/:questionId', authenticateToken, requireRole('trainer'), updateAssessmentQuestion);

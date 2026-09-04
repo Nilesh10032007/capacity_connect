@@ -153,7 +153,9 @@ export const AssessmentsView: React.FC = () => {
                     <div className="w-full flex items-center justify-between">
                       <div>
                         <span className="text-[10px] text-slate-400 uppercase block font-semibold">Your Score</span>
-                        <span className="text-sm font-extrabold text-emerald-400">{asm.userScore}% (Passed)</span>
+                        <span className={`text-sm font-extrabold ${asm.userScore >= asm.passingScore ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {asm.userScore}% ({asm.userScore >= asm.passingScore ? 'Passed' : 'Failed'})
+                        </span>
                       </div>
                       {asm.retakeAllowed && (
                         <button

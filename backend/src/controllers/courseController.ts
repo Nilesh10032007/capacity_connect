@@ -5,6 +5,7 @@ import { Enrollment } from '../models/Enrollment';
 import { ModuleProgress } from '../models/ModuleProgress';
 import { AuthRequest } from '../middleware/auth';
 import { Assessment } from '../models/Assessment';
+import { ResourceItem } from '../models/ResourceItem';
 
 export const getCourses = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -90,6 +91,36 @@ export const createCourse = async (req: AuthRequest, res: Response, next: NextFu
       }
     }
 
+    // Process Modules
+    if (req.body.modules && Array.isArray(req.body.modules)) {
+      for (const [index, mod] of req.body.modules.entries()) {
+        await CourseModule.create({
+          courseId: newCourse._id,
+          title: mod.title,
+          content: mod.description || '',
+          duration: mod.duration || '1h 0m',
+          contentUrl: mod.contentUrl || '',
+          contentType: mod.contentType || 'video',
+          orderIndex: index
+        });
+      }
+    }
+
+    // Process Resources
+    if (req.body.resources && Array.isArray(req.body.resources)) {
+      for (const resItem of req.body.resources) {
+        await ResourceItem.create({
+          courseId: newCourse._id,
+          uploaderId: req.user?.userId,
+          title: resItem.title,
+          type: resItem.type || 'other',
+          fileSize: resItem.fileSize || 'Unknown',
+          fileUrl: resItem.fileUrl || '',
+          category: resItem.category || 'Course Material'
+        });
+      }
+    }
+
     res.status(201).json({ success: true, data: newCourse });
   } catch (error) {
     next(error);
@@ -104,6 +135,39 @@ export const updateCourse = async (req: AuthRequest, res: Response, next: NextFu
       { new: true }
     );
     if (!course) return res.status(404).json({ success: false, message: 'Course not found or not yours' });
+
+    // Process Modules Update
+    if (req.body.modules && Array.isArray(req.body.modules)) {
+      await CourseModule.deleteMany({ courseId: course._id });
+      for (const [index, mod] of req.body.modules.entries()) {
+        await CourseModule.create({
+          courseId: course._id,
+          title: mod.title,
+          content: mod.description || '',
+          duration: mod.duration || '1h 0m',
+          contentUrl: mod.contentUrl || '',
+          contentType: mod.contentType || 'video',
+          orderIndex: index
+        });
+      }
+    }
+
+    // Process Resources Update
+    if (req.body.resources && Array.isArray(req.body.resources)) {
+      await ResourceItem.deleteMany({ courseId: course._id });
+      for (const resItem of req.body.resources) {
+        await ResourceItem.create({
+          courseId: course._id,
+          uploaderId: req.user?.userId,
+          title: resItem.title,
+          type: resItem.type || 'other',
+          fileSize: resItem.fileSize || 'Unknown',
+          fileUrl: resItem.fileUrl || '',
+          category: resItem.category || 'Course Material'
+        });
+      }
+    }
+
     res.json({ success: true, data: course });
   } catch (error) {
     next(error);

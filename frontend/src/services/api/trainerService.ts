@@ -11,5 +11,9 @@ export const trainerService = {
       method: 'POST',
       body: JSON.stringify({ subject, requiredCompetency, targetCourse })
     });
+  },
+
+  async getTrainerDashboard(): Promise<any> {
+    return fetchApi('/trainers/me/dashboard');
   }
 };

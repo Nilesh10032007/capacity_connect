@@ -32,6 +32,7 @@ export const TraineeDashboardView: React.FC = () => {
   const [competencies, setCompetencies] = useState<any[]>([]);
   const [resources, setResources] = useState<any[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [selectedResource, setSelectedResource] = useState<any | null>(null);
 
   useEffect(() => {
     const loadDashboard = async () => {
@@ -270,7 +271,7 @@ export const TraineeDashboardView: React.FC = () => {
                 </div>
                 <button
                   onClick={() => showToast('Registered for Live Webinar')}
-                  className="px-3 py-1 text-xs font-semibold rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200"
+                  className="px-3 py-1 text-xs font-bold rounded-md bg-slate-800 hover:bg-slate-700 text-white"
                 >
                   Join Link
                 </button>
@@ -341,28 +342,68 @@ export const TraineeDashboardView: React.FC = () => {
             </div>
           </div>
 
-          {/* Downloadable Manuals */}
+          {/* Downloadable Manuals & Resources */}
           <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
             <h4 className="text-xs font-bold text-white flex items-center gap-2 mb-2">
               <FileDown className="h-4 w-4 text-cyan-400" />
               <span>Recent Operational Resources</span>
             </h4>
             <div className="space-y-2">
-              {resources.slice(0, 2).map((r: any) => (
+              {resources.slice(0, 3).map((r: any) => (
                 <div key={r.id || r._id} className="flex items-center justify-between p-2 rounded bg-slate-950/60 text-xs border border-slate-800">
-                  <span className="truncate text-slate-300 max-w-[160px]">{r.title}</span>
-                  <button
-                    onClick={() => showToast(`Downloaded ${r.title}`)}
-                    className="p-1 text-cyan-400 hover:text-white"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                  </button>
+                  <div className="flex flex-col truncate">
+                    <span className="truncate text-slate-300 max-w-[150px] font-bold">{r.title}</span>
+                    <span className="text-[9px] text-slate-500 uppercase">{r.type}</span>
+                  </div>
+                  {['code', 'script', 'text'].includes(r.type) ? (
+                    <button
+                      onClick={() => setSelectedResource(r)}
+                      className="p-1 px-2 rounded bg-slate-800 text-indigo-400 font-bold hover:bg-slate-700 transition-colors text-[10px]"
+                    >
+                      View
+                    </button>
+                  ) : (
+                    <a
+                      href={r.fileUrl || '#'}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="p-1 text-cyan-400 hover:text-white"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                    </a>
+                  )}
                 </div>
               ))}
             </div>
           </div>
         </div>
       </div>
+
+      {/* Resource Content Modal */}
+      {selectedResource && (
+        <Modal
+          isOpen={!!selectedResource}
+          onClose={() => setSelectedResource(null)}
+          title={selectedResource.title}
+          subtitle={`Category: ${selectedResource.category} • Type: ${selectedResource.type}`}
+          maxWidth="2xl"
+        >
+          <div className="rounded-lg border border-slate-800 overflow-hidden">
+            {['code', 'script'].includes(selectedResource.type) ? (
+              <pre className="p-4 bg-slate-950 text-emerald-400 font-mono text-xs overflow-x-auto">
+                <code>{selectedResource.content || 'No content available'}</code>
+              </pre>
+            ) : (
+              <div className="p-4 bg-slate-900 text-slate-200 text-sm whitespace-pre-wrap">
+                {selectedResource.content || 'No content available'}
+              </div>
+            )}
+          </div>
+          <div className="mt-4 flex justify-end">
+            <button onClick={() => setSelectedResource(null)} className="px-4 py-2 bg-slate-800 text-white rounded text-xs font-bold hover:bg-slate-700">Close</button>
+          </div>
+        </Modal>
+      )}
 
       {/* Course Player Modal */}
       {selectedCourse && (

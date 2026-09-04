@@ -66,8 +66,10 @@ export const getAllMyAssessments = async (req: AuthRequest, res: Response, next:
       const totalQuestions = questionCountMap.get(a._id.toString()) || 0;
       
       let status: string = 'available';
-      if (result && result.status === 'passed') {
-        status = 'completed';
+      if (result) {
+        if (result.status === 'passed' || !a.retakeAllowed) {
+          status = 'completed';
+        }
       } else if (a.dueDate && new Date(a.dueDate) < new Date()) {
         status = 'overdue';
       } else if (a.dueDate && new Date(a.dueDate) > new Date()) {
@@ -114,6 +116,13 @@ export const submitAssessment = async (req: AuthRequest, res: Response, next: Ne
     const assessment = await Assessment.findById(req.params.id);
     if (!assessment) return res.status(404).json({ success: false, message: 'Assessment not found' });
 
+    if (!assessment.retakeAllowed) {
+      const existingResult = await AssessmentResult.findOne({ assessmentId: assessment._id, traineeId: req.user?.userId });
+      if (existingResult) {
+        return res.status(400).json({ success: false, message: 'You have already completed this assessment. Retakes are not allowed.' });
+      }
+    }
+
     const questions = await AssessmentQuestion.find({ assessmentId: assessment._id });
     
     let correctCount = 0;
@@ -130,7 +139,8 @@ export const submitAssessment = async (req: AuthRequest, res: Response, next: Ne
       assessmentId: assessment._id,
       traineeId: req.user?.userId,
       score,
-      status
+      status,
+      answers
     });
     await result.save();
 
@@ -295,6 +305,17 @@ export const deleteAssessmentQuestion = async (req: AuthRequest, res: Response, 
   try {
     await AssessmentQuestion.findByIdAndDelete(req.params.questionId);
     res.json({ success: true, message: 'Question deleted' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getAssessmentResponses = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const results = await AssessmentResult.find({ assessmentId: req.params.id })
+      .populate('traineeId', 'name email employeeId designation');
+    
+    res.json({ success: true, data: results });
   } catch (error) {
     next(error);
   }

@@ -22,7 +22,7 @@ export const generateTrainerMatchExplanation = async (trainerData: any, criteria
 
     const chatCompletion = await groq.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
-      model: 'llama3-8b-8192',
+      model: 'openai/gpt-oss-20b',
     });
 
     return chatCompletion.choices[0]?.message?.content || 'Matched successfully.';
@@ -127,4 +127,91 @@ Do not output any markdown codeblocks or extra conversational text, output valid
       explanation: 'Level 3 (Operational Competent) indicates full capability for independent real-time forecasting and warning issuance.'
     }
   ];
+};
+
+export const generateLearningPathway = async (
+  traineeName: string,
+  competencyName: string,
+  currentLevel: number,
+  targetLevel: number,
+  courseTitle: string,
+  courseDescription?: string,
+  courseModules?: string
+): Promise<string> => {
+  const groq = getGroqClient();
+  
+  if (!groq) {
+    return getRichMockPathway(traineeName, competencyName, currentLevel, targetLevel, courseTitle);
+  }
+
+  const prompt = `You are an expert AI Training Coach for the India Meteorological Department (IMD).
+A trainee named ${traineeName} has a skill gap in "${competencyName}".
+Their current level is ${currentLevel}, but the target level is ${targetLevel}.
+We are recommending they take the course titled: "${courseTitle}".
+
+Here is the syllabus/description of the course they will be taking:
+${courseDescription || 'N/A'}
+Modules included in this course: ${courseModules || 'General concepts of the subject.'}
+
+Generate a very detailed, engaging, and personalized 4-week learning pathway in Markdown format.
+Include:
+1. A warm, encouraging opening addressing the officer by name.
+2. A brief explanation of why this gap matters for IMD operations and public safety.
+3. A week-by-week breakdown (Week 1 to Week 4) on how they should approach this specific course. **You MUST weave the actual module names provided above into the weekly plan. Even if there are fewer than 4 modules, you MUST provide exactly 4 weeks (e.g., use Week 4 for Revision, Practical Assessment, or Field Application).**
+4. Keep the tone professional, motivating, and specific to meteorology/weather forecasting.
+5. End with a motivating concluding sentence.
+
+IMPORTANT: Do NOT use markdown tables (no | or --- borders). Your output will be rendered in a basic markdown parser that does not support tables. Use standard lists, bullet points, and headers instead of tables.
+Do not include any placeholders. Act directly as the system. Make it look beautiful in markdown with headers (#, ##, ###), bullet points, and bold text. Ensure the output is complete and not truncated.`;
+
+  try {
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [{ role: 'user', content: prompt }],
+      model: 'openai/gpt-oss-20b',
+      temperature: 0.7,
+      max_tokens: 2000,
+    });
+    
+    return chatCompletion.choices[0]?.message?.content || getRichMockPathway(traineeName, competencyName, currentLevel, targetLevel, courseTitle);
+  } catch (error) {
+    console.error('Groq AI Pathway Error:', error);
+    return getRichMockPathway(traineeName, competencyName, currentLevel, targetLevel, courseTitle);
+  }
+};
+
+const getRichMockPathway = (traineeName: string, competencyName: string, currentLevel: number, targetLevel: number, courseTitle: string) => {
+  return `# Personalized AI Learning Pathway: ${competencyName}
+
+Hello **${traineeName}**, 
+
+Based on your recent Skill Gap Analysis, your current proficiency in **${competencyName}** is at **Level ${currentLevel}**, while the IMD operational requirement is **Level ${targetLevel}**. 
+
+Bridging this gap is crucial for ensuring the highest accuracy in real-time weather forecasting and adhering to the Ministry of Earth Sciences' strict operational guidelines. To help you achieve this, I have curated a specialized 4-week learning roadmap utilizing the recommended course: **"${courseTitle}"**.
+
+---
+
+## 📅 Week-by-Week Action Plan
+
+### Week 1: Fundamentals & Theory
+* **Video Lectures:** Complete Modules 1 & 2 of the course to grasp the core mathematical and theoretical foundations.
+* **Reading Material:** Review the IMD standard operating procedures (SOP) manual for ${competencyName}.
+* **Goal:** Achieve a solid understanding of the base principles.
+
+### Week 2: Analytical Techniques & Tools
+* **Interactive Labs:** Participate in the virtual lab sessions provided in Module 3.
+* **Observation Practice:** Spend 4 hours shadowing a senior meteorologist or using historical dataset simulations.
+* **Goal:** Transition from theoretical knowledge to practical tool usage.
+
+### Week 3: Advanced Applications
+* **Video Lectures:** Complete Modules 4 & 5 focusing on edge-case scenarios and severe weather events.
+* **Hands-on Task:** Complete the mid-course assignment analyzing a recent anomalous weather pattern.
+* **Goal:** Develop independent analytical capabilities.
+
+### Week 4: Operational Readiness & Assessment
+* **Review:** Go through all case studies presented in the final module.
+* **Practice Exam:** Take the internal mock assessment to gauge your readiness.
+* **Final Evaluation:** Complete the course's final project to officially upgrade your competency to Level ${targetLevel}.
+
+---
+**💡 Pro-Tip:** Consistency is key! Dedicate at least 45 minutes daily to this pathway. You have the full support of the IMD capacity building team. Good luck!`;
 };

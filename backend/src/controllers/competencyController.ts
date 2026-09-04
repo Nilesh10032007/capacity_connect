@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { UserCompetency } from '../models/UserCompetency';
 import { Course } from '../models/Course';
+import { CourseModule } from '../models/CourseModule';
+import { generateLearningPathway } from '../services/groqService';
 import { AuthRequest } from '../middleware/auth';
 import { User } from '../models/User';
 
@@ -149,6 +151,83 @@ export const getMySkillGaps = async (req: AuthRequest, res: Response, next: Next
     }
 
     res.json({ success: true, data: gaps });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// POST /api/trainees/me/skill-gaps/pathway
+export const generatePathwayForSkillGap = async (req: AuthRequest, res: Response, next: NextFunction): Promise<any> => {
+  try {
+    const userId = req.user?.userId;
+    const { competencyName } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Attempt to find the specific competency to know current vs target level
+    const compRecord = await Competency.findOne({ name: competencyName });
+    let currentLevel = 0;
+    let targetLevel = 4; // Default IMD operational requirement
+
+    if (compRecord) {
+      const userComp = await UserCompetency.findOne({ userId, competencyId: compRecord._id });
+      if (userComp) {
+        currentLevel = userComp.currentLevel;
+        targetLevel = userComp.requiredLevel || 4;
+      }
+    }
+
+    // Try fuzzy match by keywords (e.g. match 'Radar' from 'Radar Meteorology')
+    const keywords = competencyName.split(/[\s&]+/).filter((w: string) => w.length > 3).map((w: string) => new RegExp(w, 'i'));
+    let recommendedCourse = null;
+    
+    if (keywords.length > 0) {
+      recommendedCourse = await Course.findOne({
+        $or: keywords.map((kw: RegExp) => ({ competenciesCovered: kw }))
+      });
+    }
+
+    // Fallback to exactly match
+    if (!recommendedCourse) {
+      recommendedCourse = await Course.findOne({
+        competenciesCovered: { $in: [new RegExp(competencyName, 'i')] }
+      });
+    }
+
+    // Absolute fallback (pick highest rated course or first seeded course)
+    if (!recommendedCourse) {
+      recommendedCourse = await Course.findOne({ status: 'published' }).sort({ rating: -1 });
+    }
+
+    if (!recommendedCourse) {
+      return res.status(404).json({ success: false, message: 'No relevant course found to bridge this gap.' });
+    }
+
+    const traineeName = user.name || 'Trainee';
+
+    const courseModules = await CourseModule.find({ courseId: recommendedCourse._id }).sort('orderIndex');
+    const modulesText = courseModules.map(m => m.title).join(', ');
+
+    const pathwayMarkdown = await generateLearningPathway(
+      traineeName,
+      competencyName,
+      currentLevel,
+      targetLevel,
+      recommendedCourse.title,
+      recommendedCourse.description,
+      modulesText
+    );
+
+    res.json({
+      success: true,
+      data: {
+        pathway: pathwayMarkdown,
+        recommendedCourse: recommendedCourse
+      }
+    });
   } catch (error) {
     next(error);
   }

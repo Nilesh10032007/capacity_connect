@@ -13,9 +13,11 @@ import {
   BookOpen,
   CheckCircle,
   PlayCircle,
-  Loader2
+  Loader2,
+  BrainCircuit
 } from 'lucide-react';
 import { courseService } from '../../../services/api/courseService';
+import { traineeService } from '../../../services/api/traineeService';
 
 export const CourseCatalogView: React.FC = () => {
   const { showToast, setActiveTab } = useApp();
@@ -42,6 +44,18 @@ export const CourseCatalogView: React.FC = () => {
   useEffect(() => {
     loadCourses();
   }, []);
+
+  useEffect(() => {
+    const handleOpenCourse = (e: any) => {
+      const courseId = e.detail;
+      const course = courses.find((c: any) => c.id === courseId || c._id === courseId);
+      if (course) {
+        setModalCourse(course);
+      }
+    };
+    window.addEventListener('openCourseModal', handleOpenCourse);
+    return () => window.removeEventListener('openCourseModal', handleOpenCourse);
+  }, [courses]);
 
   const handleEnroll = async (courseId: string, title: string) => {
     try {
@@ -178,17 +192,17 @@ export const CourseCatalogView: React.FC = () => {
               <div className="mt-5 pt-4 border-t border-slate-800 flex items-center justify-between gap-2">
                 <button
                   onClick={() => setModalCourse(course)}
-                  className="rounded-lg bg-slate-800 hover:bg-slate-700 px-3 py-1.5 text-xs font-bold text-slate-200 transition-all border border-slate-700"
+                  className="rounded-lg bg-slate-800 hover:bg-slate-700 px-3 py-1.5 text-xs font-bold text-white transition-all border border-slate-700"
                 >
                   View Course
                 </button>
 
                 <button
-                  onClick={() => handleEnroll(course.id, course.title)}
-                  disabled={enrollingId === course.id}
+                  onClick={() => handleEnroll(course.id || (course as any)._id, course.title)}
+                  disabled={enrollingId === (course.id || (course as any)._id)}
                   className="rounded-lg bg-cyan-600 hover:bg-cyan-500 px-3 py-1.5 text-xs font-bold text-white transition-all shadow-md shadow-cyan-500/20"
                 >
-                  {enrollingId === course.id ? 'Enrolling...' : 'Enroll Now'}
+                  {enrollingId === (course.id || (course as any)._id) ? 'Enrolling...' : 'Enroll Now'}
                 </button>
               </div>
             </div>
@@ -196,58 +210,98 @@ export const CourseCatalogView: React.FC = () => {
         </div>
       )}
 
-      {/* Course Detail Modal */}
+      {/* Course Detail Modal (Udemy Style) */}
       {modalCourse && (
         <Modal
           isOpen={!!modalCourse}
           onClose={() => setModalCourse(null)}
           title={`${modalCourse.code}: ${modalCourse.title}`}
           subtitle={`Subject: ${modalCourse.subject} • Trainer: ${modalCourse.trainerName}`}
-          maxWidth="2xl"
+          maxWidth="4xl"
         >
-          <div className="space-y-4">
-            <div className="relative aspect-video w-full rounded-xl overflow-hidden border border-slate-800">
-              <img src={modalCourse.thumbnail} alt={modalCourse.title} className="h-full w-full object-cover" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-h-[70vh] overflow-y-auto pr-2">
+            {/* Left Column: Details & Curriculum */}
+            <div className="lg:col-span-2 space-y-6">
+              <div className="relative aspect-video w-full rounded-xl overflow-hidden border border-slate-800 shadow-lg">
+                <img src={modalCourse.thumbnail} alt={modalCourse.title} className="h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/20 to-transparent"></div>
+                <div className="absolute bottom-4 left-4">
+                  <Badge variant="cyan" className="mb-2">{modalCourse.difficulty}</Badge>
+                  <h2 className="text-xl font-bold text-white drop-shadow-md">{modalCourse.title}</h2>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-bold text-white mb-2">About This Course</h3>
+                <p className="text-xs text-slate-300 leading-relaxed bg-slate-900/50 p-4 rounded-lg border border-slate-800/50">
+                  {modalCourse.description}
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-bold text-white mb-3">Course Curriculum</h3>
+                <div className="space-y-2">
+                  {[1, 2, 3].map((num) => (
+                    <div key={num} className="p-3 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-slate-800 flex items-center justify-center text-cyan-400 font-bold text-xs">
+                          {num}
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-white">Module {num}: {num === 1 ? 'Introduction & Fundamentals' : num === 2 ? 'Core Concepts & Analysis' : 'Advanced Applications'}</h4>
+                          <span className="text-[10px] text-slate-400">{num === 2 ? 'Interactive Lab' : 'Video Lecture'}</span>
+                        </div>
+                      </div>
+                      <span className="text-xs font-mono text-slate-500">1h 30m</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed">{modalCourse.description}</p>
+            {/* Right Column: Enrollment Info */}
+            <div className="space-y-4">
+              <div className="p-5 rounded-xl bg-slate-900 border border-slate-800 shadow-xl sticky top-0">
+                <div className="text-center mb-4">
+                  <span className="text-2xl font-black text-white block">Free</span>
+                  <span className="text-xs text-emerald-400 font-bold">IMD Employee Benefit</span>
+                </div>
 
-            {/* Prerequisites & Competencies */}
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="p-3 rounded-lg bg-slate-950 border border-slate-800">
-                <span className="font-bold text-white block mb-1">Prerequisites</span>
-                <ul className="list-disc list-inside text-slate-400 space-y-0.5">
-                  {modalCourse.prerequisites.map((p, i) => (
-                    <li key={i}>{p}</li>
-                  ))}
-                </ul>
-              </div>
-              <div className="p-3 rounded-lg bg-slate-950 border border-slate-800">
-                <span className="font-bold text-white block mb-1">Competencies Addressed</span>
-                <ul className="list-disc list-inside text-cyan-400 space-y-0.5">
-                  {modalCourse.competenciesCovered.map((c, i) => (
-                    <li key={i}>{c}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+                <button
+                  onClick={() => {
+                    handleEnroll(modalCourse.id || (modalCourse as any)._id, modalCourse.title);
+                    setModalCourse(null);
+                  }}
+                  disabled={enrollingId === (modalCourse.id || (modalCourse as any)._id)}
+                  className="w-full py-3 mb-4 text-sm font-bold rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg shadow-cyan-500/20 transition-all"
+                >
+                  {enrollingId === (modalCourse.id || (modalCourse as any)._id) ? 'Enrolling...' : 'Enroll Now'}
+                </button>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
-              <button
-                onClick={() => setModalCourse(null)}
-                className="px-4 py-2 text-xs rounded-lg text-slate-400 hover:bg-slate-800"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => {
-                  setModalCourse(null);
-                  showToast(`Successfully enrolled in ${modalCourse.code}!`);
-                }}
-                className="px-4 py-2 text-xs font-bold rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white"
-              >
-                Enroll Now
-              </button>
+                <div className="space-y-3 pt-4 border-t border-slate-800">
+                  <div className="flex items-start gap-2 text-xs">
+                    <BookOpen className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
+                    <div>
+                      <span className="font-bold text-white block">Prerequisites</span>
+                      <ul className="list-disc list-inside text-slate-400 mt-1">
+                        {modalCourse.prerequisites?.map((p, i) => <li key={i}>{p}</li>)}
+                        {(!modalCourse.prerequisites || modalCourse.prerequisites.length === 0) && <li>None</li>}
+                      </ul>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-2 text-xs mt-3">
+                    <BrainCircuit className="h-4 w-4 text-cyan-400 mt-0.5 shrink-0" />
+                    <div>
+                      <span className="font-bold text-white block">Competencies Covered</span>
+                      <ul className="list-disc list-inside text-cyan-400/80 mt-1">
+                        {modalCourse.competenciesCovered?.map((c, i) => <li key={i}>{c}</li>)}
+                        {(!modalCourse.competenciesCovered || modalCourse.competenciesCovered.length === 0) && <li>General Meteorology</li>}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </Modal>

@@ -1,14 +1,27 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Badge } from '../../common/Badge';
-import { Users, TrendingUp, Award, Search } from 'lucide-react';
+import { Users, TrendingUp, Award, Search, Loader2 } from 'lucide-react';
+import { courseService } from '../../../services/api/courseService';
+import { useApp } from '../../../context/AppContext';
 
 export const TraineePerformanceView: React.FC = () => {
-  const trainees = [
-    { id: '1', name: 'Dr. Ananya Sharma', course: 'Advanced Doppler Radar Nowcasting', progress: 75, examScore: '90%', improvement: '+2 Competency Levels', status: 'Active' },
-    { id: '2', name: 'Rajesh Verma', course: 'WRF Atmospheric Modeling Environment', progress: 40, examScore: '82%', improvement: '+1 Competency Level', status: 'Active' },
-    { id: '3', name: 'Priya Nair', course: 'INSAT-3DR Satellite Applications', progress: 100, examScore: '95%', improvement: '+3 Competency Levels', status: 'Completed' },
-    { id: '4', name: 'Dr. Vikram Sethi', course: 'Deep Learning & Physics-Informed AI', progress: 15, examScore: '78%', improvement: '+1 Competency Level', status: 'Active' }
-  ];
+  const { showToast } = useApp();
+  const [trainees, setTrainees] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTrainees = async () => {
+      try {
+        const data = await courseService.getTrainerTrainees();
+        setTrainees(data || []);
+      } catch (err: any) {
+        showToast(err.message || 'Failed to fetch trainees');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTrainees();
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -36,28 +49,45 @@ export const TraineePerformanceView: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800 text-slate-300">
-              {trainees.map((t) => (
-                <tr key={t.id} className="hover:bg-slate-800/40 transition-colors">
-                  <td className="p-4 font-bold text-white">{t.name}</td>
-                  <td className="p-4 text-cyan-400 font-semibold">{t.course}</td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-2">
-                      <div className="h-1.5 w-16 bg-slate-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-cyan-400" style={{ width: `${t.progress}%` }} />
-                      </div>
-                      <span className="font-mono text-[11px]">{t.progress}%</span>
-                    </div>
-                  </td>
-                  <td className="p-4 font-mono font-bold text-emerald-400">{t.examScore}</td>
-                  <td className="p-4 text-emerald-400 font-semibold flex items-center gap-1">
-                    <TrendingUp className="h-3.5 w-3.5" />
-                    {t.improvement}
-                  </td>
-                  <td className="p-4">
-                    <Badge variant={t.status === 'Completed' ? 'emerald' : 'cyan'}>{t.status}</Badge>
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center">
+                    <Loader2 className="h-6 w-6 animate-spin text-emerald-400 mx-auto" />
+                    <p className="text-xs text-slate-400 mt-2">Loading trainee data...</p>
                   </td>
                 </tr>
-              ))}
+              ) : trainees.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center text-slate-400 text-xs">
+                    No trainees found enrolled in your courses.
+                  </td>
+                </tr>
+              ) : (
+                trainees.map((t) => (
+                  <tr key={t.id} className="hover:bg-slate-800/40 transition-colors">
+                    <td className="p-4 font-bold text-white">{t.name}</td>
+                    <td className="p-4 text-cyan-400 font-semibold">{t.course}</td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-16 bg-slate-800 rounded-full overflow-hidden">
+                          <div className="h-full bg-cyan-400" style={{ width: `${t.progress}%` }} />
+                        </div>
+                        <span className="font-mono text-[11px]">{t.progress}%</span>
+                      </div>
+                    </td>
+                    <td className="p-4 font-bold">{t.examScore}</td>
+                    <td className="p-4 text-emerald-400 flex items-center gap-1.5">
+                      <TrendingUp className="h-3 w-3" />
+                      {t.improvement}
+                    </td>
+                    <td className="p-4">
+                      <Badge variant={t.status === 'Completed' ? 'emerald' : 'cyan'}>
+                        {t.status}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

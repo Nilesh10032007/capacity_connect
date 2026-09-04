@@ -12,5 +12,13 @@ export const competencyService = {
 
   async getCompetencyHeatmap(): Promise<HeatmapCell[]> {
     return fetchApi('/admin/analytics/competency-heatmap');
+  },
+
+  // Generate personalized learning pathway using AI
+  async generateLearningPathway(competencyName: string): Promise<any> {
+    return fetchApi('/trainees/me/skill-gaps/pathway', {
+      method: 'POST',
+      body: JSON.stringify({ competencyName })
+    });
   }
 };

@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useApp } from '../../../context/AppContext';
 import { StatCard } from '../../common/StatCard';
 import { Badge } from '../../common/Badge';
+import { courseService } from '../../../services/api/courseService';
+import { trainerService } from '../../../services/api/trainerService';
 import {
   BookOpen,
   Users,
@@ -12,16 +14,43 @@ import {
   FolderPlus,
   ArrowRight,
   TrendingUp,
-  PlusCircle
+  PlusCircle,
+  Loader2
 } from 'lucide-react';
-import { MOCK_COURSES, MOCK_FEEDBACK } from '../../../services/mockData';
+import { MOCK_FEEDBACK } from '../../../services/mockData';
 
 export const TrainerDashboardView: React.FC = () => {
   const { user } = useAuth();
   const { setActiveTab } = useApp();
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const trainerCourses = MOCK_COURSES.filter((c) => c.trainerId === user?.id || c.trainerName.includes('Murthy'));
-  const totalLearners = trainerCourses.reduce((acc, curr) => acc + curr.enrolledCount, 0);
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        setLoading(true);
+        const res = await trainerService.getTrainerDashboard();
+        setDashboardData(res);
+      } catch (error) {
+        console.error('Failed to fetch trainer dashboard:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDashboard();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-400" />
+        <span className="ml-3 text-sm text-slate-300">Loading Dashboard...</span>
+      </div>
+    );
+  }
+
+  const trainerCourses = dashboardData?.courses || [];
+  const totalLearners = dashboardData?.totalLearners || 0;
 
   return (
     <div className="space-y-6">
@@ -55,41 +84,41 @@ export const TrainerDashboardView: React.FC = () => {
         <StatCard
           title="Total Courses"
           value={trainerCourses.length}
-          subtitle="2 Active, 1 Draft"
+          subtitle="Authored by you"
           icon={<BookOpen className="h-4 w-4" />}
           accentColor="emerald"
         />
         <StatCard
           title="Active Learners"
           value={totalLearners}
-          subtitle="Across 3 modules"
+          subtitle="Enrolled trainees"
           icon={<Users className="h-4 w-4" />}
           accentColor="blue"
         />
         <StatCard
           title="Completed Learners"
-          value={184}
+          value={dashboardData?.completedLearners || 0}
           subtitle="Certified officers"
           icon={<CheckCircle2 className="h-4 w-4" />}
           accentColor="cyan"
         />
         <StatCard
           title="Avg Exam Score"
-          value="84.2%"
+          value={`${dashboardData?.avgExamScore || 0}%`}
           subtitle="Pass threshold: 75%"
           icon={<Award className="h-4 w-4" />}
           accentColor="purple"
         />
         <StatCard
           title="Rating Score"
-          value="4.9 / 5"
-          subtitle="Based on 67 reviews"
+          value={`${dashboardData?.ratingScore || 0} / 5`}
+          subtitle="Based on reviews"
           icon={<Star className="h-4 w-4" />}
           accentColor="amber"
         />
         <StatCard
           title="Uploaded Assets"
-          value={36}
+          value={dashboardData?.uploadedAssets || 0}
           subtitle="PDFs, Videos, Notebooks"
           icon={<FolderPlus className="h-4 w-4" />}
           accentColor="cyan"
@@ -114,28 +143,34 @@ export const TrainerDashboardView: React.FC = () => {
           </div>
 
           <div className="space-y-3">
-            {trainerCourses.map((crs) => (
-              <div key={crs.id} className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <img src={crs.thumbnail} alt={crs.title} className="h-14 w-20 rounded-lg object-cover border border-slate-800" />
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="emerald">{crs.code}</Badge>
-                      <span className="text-xs text-slate-400">{crs.subject}</span>
-                    </div>
-                    <h4 className="text-sm font-bold text-white mt-1">{crs.title}</h4>
-                    <p className="text-xs text-slate-400">{crs.enrolledCount} Trainees • {crs.completionRate}% Completion</p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => setActiveTab('my-courses')}
-                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700"
-                >
-                  Manage
-                </button>
+            {trainerCourses.length === 0 ? (
+              <div className="p-8 text-center bg-slate-900/60 border border-slate-800 rounded-xl text-slate-400 text-xs">
+                You haven't created any courses yet.
               </div>
-            ))}
+            ) : (
+              trainerCourses.map((crs: any) => (
+                <div key={crs._id || crs.id} className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <img src={crs.thumbnailUrl || crs.thumbnail || 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=800&q=80'} alt={crs.title} className="h-14 w-20 rounded-lg object-cover border border-slate-800" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="emerald">{crs.code}</Badge>
+                        <span className="text-xs text-slate-400">{crs.subject}</span>
+                      </div>
+                      <h4 className="text-sm font-bold text-white mt-1">{crs.title}</h4>
+                      <p className="text-xs text-slate-400">{crs.difficulty} • {crs.duration}</p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setActiveTab('my-courses')}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700"
+                  >
+                    Manage
+                  </button>
+                </div>
+              ))
+            )}
           </div>
         </div>
 

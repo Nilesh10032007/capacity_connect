@@ -56,11 +56,22 @@ export const courseService = {
     });
   },
 
+  async updateCourse(courseId: string, updatedData: Partial<Course>): Promise<Course> {
+    return fetchApi(`/courses/${courseId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updatedData)
+    });
+  },
+
   async updateCourseStatus(courseId: string, status: Course['status']): Promise<Course> {
     return fetchApi(`/courses/${courseId}/status`, {
       method: 'PATCH',
       body: JSON.stringify({ status })
     });
+  },
+
+  async getMyTrainerCourses(): Promise<any[]> {
+    return fetchApi('/courses/trainer/me');
   },
 
   async getResources(courseId?: string): Promise<ResourceItem[]> {
@@ -74,6 +85,12 @@ export const courseService = {
     return fetchApi('/resources/upload', {
       method: 'POST',
       body: resourceData
+    });
+  },
+
+  async deleteResource(resourceId: string): Promise<any> {
+    return fetchApi(`/resources/${resourceId}`, {
+      method: 'DELETE'
     });
   },
 
@@ -102,6 +119,16 @@ export const courseService = {
   // Get all assessments created by this trainer
   async getTrainerAssessments(): Promise<any[]> {
     return fetchApi('/assessments/trainer/my');
+  },
+
+  // Get Trainer Dashboard stats
+  async getTrainerDashboard(): Promise<any> {
+    return fetchApi('/trainers/me/dashboard');
+  },
+
+  // Get Trainer Trainees
+  async getTrainerTrainees(): Promise<any> {
+    return fetchApi('/trainers/me/trainees');
   },
 
   // Get questions for an assessment (with correct answers, for editing)
@@ -142,11 +169,16 @@ export const courseService = {
     });
   },
 
-  // Delete a question
-  async deleteQuestion(questionId: string): Promise<any> {
+  // Delete a specific question from a bank
+  async deleteAssessmentQuestion(questionId: string): Promise<any> {
     return fetchApi(`/assessments/questions/${questionId}`, {
       method: 'DELETE'
     });
+  },
+
+  // Get trainee responses for an assessment
+  async getAssessmentResponses(assessmentId: string): Promise<any[]> {
+    return fetchApi(`/assessments/${assessmentId}/responses`);
   },
 
   // === CERTIFICATES ===
