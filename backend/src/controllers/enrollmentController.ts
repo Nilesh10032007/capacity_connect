@@ -73,8 +73,37 @@ export const updateModuleProgress = async (req: AuthRequest, res: Response, next
 export const getMyEnrollments = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const enrollments = await Enrollment.find({ traineeId: req.user?.userId })
-      .populate('courseId');
-    res.json({ success: true, data: enrollments });
+      .populate({
+        path: 'courseId',
+        populate: { path: 'trainerId', select: 'name avatarUrl' }
+      })
+      .sort({ enrolledAt: -1 });
+
+    const result = [];
+    for (const enr of enrollments) {
+      const courseObj = enr.courseId ? (enr.courseId as any).toObject() : null;
+      if (courseObj) {
+        const modules = await CourseModule.find({ courseId: courseObj._id }).sort('orderIndex');
+        const moduleProgress = await ModuleProgress.find({ enrollmentId: enr._id });
+        const progressMap = new Map(moduleProgress.map((p) => [p.moduleId.toString(), p.isCompleted]));
+
+        const modulesWithProgress = modules.map((m) => ({
+          ...m.toObject(),
+          isCompleted: progressMap.get(m._id.toString()) || false
+        }));
+
+        result.push({
+          ...enr.toObject(),
+          course: {
+            ...courseObj,
+            progress: enr.progressPercentage,
+            modules: modulesWithProgress
+          }
+        });
+      }
+    }
+
+    res.json({ success: true, data: result });
   } catch (error) {
     next(error);
   }

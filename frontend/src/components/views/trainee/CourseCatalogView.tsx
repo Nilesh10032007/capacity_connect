@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { MOCK_COURSES } from '../../../services/mockData';
+import React, { useState, useEffect } from 'react';
 import { Badge } from '../../common/Badge';
 import { Modal } from '../../common/Modal';
 import { useApp } from '../../../context/AppContext';
@@ -13,17 +12,52 @@ import {
   Clock,
   BookOpen,
   CheckCircle,
-  PlayCircle
+  PlayCircle,
+  Loader2
 } from 'lucide-react';
+import { courseService } from '../../../services/api/courseService';
 
 export const CourseCatalogView: React.FC = () => {
-  const { showToast } = useApp();
+  const { showToast, setActiveTab } = useApp();
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [enrollingId, setEnrollingId] = useState<string | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<string>('All');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('All');
   const [search, setSearch] = useState<string>('');
   const [modalCourse, setModalCourse] = useState<Course | null>(null);
 
-  const filteredCourses = MOCK_COURSES.filter((course) => {
+  const loadCourses = async () => {
+    try {
+      setLoading(true);
+      const data = await courseService.getCourses();
+      setCourses(data || []);
+    } catch (err) {
+      console.error('Failed to fetch courses:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCourses();
+  }, []);
+
+  const handleEnroll = async (courseId: string, title: string) => {
+    try {
+      setEnrollingId(courseId);
+      await traineeService.enrollInCourse(courseId);
+      showToast(`Enrolled in "${title}" successfully!`);
+      setActiveTab('my-learning');
+    } catch (err: any) {
+      showToast(err.message || 'Already enrolled in this course');
+      setActiveTab('my-learning');
+    } finally {
+      setEnrollingId(null);
+    }
+  };
+
+  const filteredCourses = courses.filter((course) => {
     const matchesSubject = selectedSubject === 'All' || course.subject === selectedSubject;
     const matchesDiff = selectedDifficulty === 'All' || course.difficulty === selectedDifficulty;
     const matchesSearch =
@@ -31,6 +65,15 @@ export const CourseCatalogView: React.FC = () => {
       course.code.toLowerCase().includes(search.toLowerCase());
     return matchesSubject && matchesDiff && matchesSearch;
   });
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-cyan-400" />
+        <span className="ml-3 text-sm text-slate-300">Loading Live Course Catalog from MongoDB...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -41,7 +84,7 @@ export const CourseCatalogView: React.FC = () => {
             <Compass className="h-5 w-5 text-cyan-400" />
             <span>Operational Capacity Course Catalog</span>
           </h2>
-          <p className="text-xs text-slate-400">Certified courses designed by IMD & MoES senior scientists for operational capacity enhancement.</p>
+          <p className="text-xs text-slate-400">Certified courses created by IMD & MoES senior scientists for operational capacity enhancement.</p>
         </div>
       </div>
 
@@ -89,55 +132,69 @@ export const CourseCatalogView: React.FC = () => {
       </div>
 
       {/* Course Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredCourses.map((course) => (
-          <div
-            key={course.id}
-            className="rounded-xl border border-slate-800 bg-slate-900/60 p-5 shadow-lg flex flex-col justify-between transition-all hover:border-slate-700"
-          >
-            <div>
-              <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-slate-800 mb-4">
-                <img src={course.thumbnail} alt={course.title} className="h-full w-full object-cover" />
-                <span className="absolute top-2 left-2">
-                  <Badge variant="cyan">{course.code}</Badge>
-                </span>
-                <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded bg-slate-950/80 px-2 py-0.5 text-xs text-amber-400 font-bold border border-slate-800">
-                  <Star className="h-3 w-3 fill-amber-400" />
-                  <span>{course.rating}</span>
+      {filteredCourses.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/40 p-12 text-center">
+          <BookOpen className="mx-auto h-10 w-10 text-slate-500 mb-3" />
+          <h3 className="text-base font-bold text-white">No Published Courses Available</h3>
+          <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
+            Switch to the Admin portal to create and publish courses. Once published, courses will appear live here for trainees.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredCourses.map((course) => (
+            <div
+              key={course.id}
+              className="rounded-xl border border-slate-800 bg-slate-900/60 p-5 shadow-lg flex flex-col justify-between transition-all hover:border-slate-700"
+            >
+              <div>
+                <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-slate-800 mb-4">
+                  <img src={course.thumbnail} alt={course.title} className="h-full w-full object-cover" />
+                  <span className="absolute top-2 left-2">
+                    <Badge variant="cyan">{course.code}</Badge>
+                  </span>
+                  <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded bg-slate-950/80 px-2 py-0.5 text-xs text-amber-400 font-bold border border-slate-800">
+                    <Star className="h-3 w-3 fill-amber-400" />
+                    <span>{course.rating}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+                  <span className="font-semibold text-cyan-400">{course.subject}</span>
+                  <span className="font-mono text-slate-400">{course.duration}</span>
+                </div>
+
+                <h3 className="text-base font-bold text-white line-clamp-1">{course.title}</h3>
+                <p className="mt-1 text-xs text-slate-400 line-clamp-2">{course.description}</p>
+
+                {/* Trainer Info */}
+                <div className="mt-3 flex items-center gap-2 text-xs text-slate-300">
+                  <img src={course.trainerAvatar} alt={course.trainerName} className="h-5 w-5 rounded-full object-cover" />
+                  <span className="truncate">{course.trainerName}</span>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-                <span className="font-semibold text-cyan-400">{course.subject}</span>
-                <span className="font-mono text-slate-400">{course.duration}</span>
-              </div>
+              {/* Bottom Actions */}
+              <div className="mt-5 pt-4 border-t border-slate-800 flex items-center justify-between gap-2">
+                <button
+                  onClick={() => setModalCourse(course)}
+                  className="rounded-lg bg-slate-800 hover:bg-slate-700 px-3 py-1.5 text-xs font-bold text-slate-200 transition-all border border-slate-700"
+                >
+                  View Course
+                </button>
 
-              <h3 className="text-base font-bold text-white line-clamp-1">{course.title}</h3>
-              <p className="mt-1 text-xs text-slate-400 line-clamp-2">{course.description}</p>
-
-              {/* Trainer Info */}
-              <div className="mt-3 flex items-center gap-2 text-xs text-slate-300">
-                <img src={course.trainerAvatar} alt={course.trainerName} className="h-5 w-5 rounded-full object-cover" />
-                <span className="truncate">{course.trainerName}</span>
+                <button
+                  onClick={() => handleEnroll(course.id, course.title)}
+                  disabled={enrollingId === course.id}
+                  className="rounded-lg bg-cyan-600 hover:bg-cyan-500 px-3 py-1.5 text-xs font-bold text-white transition-all shadow-md shadow-cyan-500/20"
+                >
+                  {enrollingId === course.id ? 'Enrolling...' : 'Enroll Now'}
+                </button>
               </div>
             </div>
-
-            {/* Bottom Actions */}
-            <div className="mt-5 pt-4 border-t border-slate-800 flex items-center justify-between gap-2">
-              <span className="text-xs text-slate-400">
-                {course.enrolledCount} Trainees Enrolled
-              </span>
-
-              <button
-                onClick={() => setModalCourse(course)}
-                className="rounded-lg bg-slate-800 hover:bg-slate-700 px-3 py-1.5 text-xs font-bold text-slate-200 transition-all border border-slate-700"
-              >
-                View Course
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Course Detail Modal */}
       {modalCourse && (

@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { MOCK_COURSES, MOCK_RESOURCES } from '../../../services/mockData';
+import React, { useState, useEffect } from 'react';
 import { Badge } from '../../common/Badge';
 import { Modal } from '../../common/Modal';
 import { useApp } from '../../../context/AppContext';
@@ -11,15 +10,76 @@ import {
   Video,
   Download,
   CheckCircle,
-  Sparkles
+  Sparkles,
+  Loader2
 } from 'lucide-react';
-import { Course } from '../../../types';
+import { Course, ResourceItem } from '../../../types';
+import { traineeService } from '../../../services/api/traineeService';
 
 export const MyLearningView: React.FC = () => {
-  const { showToast } = useApp();
+  const { showToast, setActiveTab } = useApp();
+  const [loading, setLoading] = useState<boolean>(true);
+  const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([]);
+  const [resources, setResources] = useState<ResourceItem[]>([]);
   const [activeCourse, setActiveCourse] = useState<Course | null>(null);
 
-  const enrolledCourses = MOCK_COURSES.filter((c) => (c.progress ?? 0) > 0);
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [enrollmentData, resourceData] = await Promise.all([
+          traineeService.getMyEnrollments(),
+          traineeService.getResources()
+        ]);
+
+        const mappedCourses: Course[] = (enrollmentData || []).map((e: any) => {
+          const c = e.course || e.courseId || {};
+          return {
+            id: c._id || e._id,
+            code: c.code || 'COURSE',
+            title: c.title || 'Operational Course',
+            subject: c.subject || 'Meteorology',
+            description: c.description || '',
+            difficulty: c.difficulty || 'Intermediate',
+            duration: c.duration || '30 hrs',
+            trainerName: c.trainerId?.name || 'Senior IMD Scientist',
+            trainerAvatar: c.trainerId?.avatarUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80',
+            thumbnail: c.thumbnailUrl || 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=800&q=80',
+            rating: 4.8,
+            enrolledCount: 34,
+            status: c.status || 'published',
+            progress: c.progress ?? e.progressPercentage ?? 0,
+            competenciesCovered: c.competenciesCovered || [],
+            prerequisites: c.prerequisites || [],
+            modules: (c.modules || []).map((m: any) => ({
+              id: m._id || m.id,
+              title: m.title,
+              duration: m.duration,
+              contentType: m.contentType || 'video',
+              isCompleted: m.isCompleted || false
+            }))
+          };
+        });
+
+        setEnrolledCourses(mappedCourses);
+        setResources(resourceData || []);
+      } catch (err) {
+        console.error('Failed to load my learning data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-cyan-400" />
+        <span className="ml-3 text-sm text-slate-300">Loading Enrolled Courses...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -35,8 +95,23 @@ export const MyLearningView: React.FC = () => {
       </div>
 
       {/* Course Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {enrolledCourses.map((course) => (
+      {enrolledCourses.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/40 p-12 text-center">
+          <BookOpen className="mx-auto h-10 w-10 text-slate-500 mb-3" />
+          <h3 className="text-base font-bold text-white">No Active Enrolled Courses</h3>
+          <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto mb-4">
+            Enroll in a course from the Course Catalog or through your personalized Skill Gap Analysis pathway.
+          </p>
+          <button
+            onClick={() => setActiveTab('courses')}
+            className="px-5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-xs font-bold text-white shadow-lg shadow-cyan-500/20"
+          >
+            Browse Course Catalog
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {enrolledCourses.map((course) => (
           <div
             key={course.id}
             className="rounded-xl border border-slate-800 bg-slate-900/60 p-5 shadow-lg flex flex-col justify-between"
@@ -89,7 +164,8 @@ export const MyLearningView: React.FC = () => {
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      )}
 
       {/* Recently Accessed Resources */}
       <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
@@ -98,12 +174,12 @@ export const MyLearningView: React.FC = () => {
           <span>Recently Accessed Learning Resources & Notebooks</span>
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {MOCK_RESOURCES.map((r) => (
-            <div key={r.id} className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+          {resources.map((r: any) => (
+            <div key={r._id || r.id} className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 flex items-center justify-between">
               <div>
-                <span className="text-[10px] font-semibold text-cyan-400 uppercase">{r.category}</span>
+                <span className="text-[10px] font-semibold text-cyan-400 uppercase">{r.category || 'resource'}</span>
                 <h4 className="text-xs font-bold text-white truncate max-w-[180px]">{r.title}</h4>
-                <span className="text-[10px] text-slate-500">{r.fileSize} • {r.uploadedBy}</span>
+                <span className="text-[10px] text-slate-500">{r.fileSize || '2 MB'} • IMD Operational</span>
               </div>
               <button
                 onClick={() => showToast(`Downloaded ${r.title}`)}

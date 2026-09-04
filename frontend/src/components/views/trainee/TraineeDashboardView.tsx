@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useApp } from '../../../context/AppContext';
 import { StatCard } from '../../common/StatCard';
@@ -17,20 +17,76 @@ import {
   Download,
   AlertCircle,
   Video,
-  FileDown
+  FileDown,
+  Loader2
 } from 'lucide-react';
-import { MOCK_COURSES, MOCK_COMPETENCIES, MOCK_ASSESSMENTS, MOCK_CERTIFICATES, MOCK_RESOURCES } from '../../../services/mockData';
 import { Course } from '../../../types';
+import { traineeService, TraineeDashboardData } from '../../../services/api/traineeService';
 
 export const TraineeDashboardView: React.FC = () => {
   const { user } = useAuth();
   const { setActiveTab, showToast } = useApp();
 
+  const [loading, setLoading] = useState<boolean>(true);
+  const [dashboardData, setDashboardData] = useState<TraineeDashboardData | null>(null);
+  const [competencies, setCompetencies] = useState<any[]>([]);
+  const [resources, setResources] = useState<any[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
 
-  const enrolledCourses = MOCK_COURSES.filter((c) => (c.progress ?? 0) > 0);
-  const pendingAssessments = MOCK_ASSESSMENTS.filter((a) => a.status === 'upcoming' || a.status === 'available');
-  const earnedCertificates = MOCK_CERTIFICATES;
+  useEffect(() => {
+    const loadDashboard = async () => {
+      try {
+        setLoading(true);
+        const [data, compData, resData] = await Promise.all([
+          traineeService.getDashboardSummary(),
+          traineeService.getCompetencies().catch(() => []),
+          traineeService.getResources().catch(() => [])
+        ]);
+        setDashboardData(data);
+        setCompetencies(compData || []);
+        setResources(resData || []);
+      } catch (err: any) {
+        console.error('Error fetching dashboard summary:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadDashboard();
+  }, []);
+
+  const enrolledCourses: Course[] = (dashboardData?.enrollments || []).map((e: any) => {
+    const c = e.courseId || {};
+    return {
+      id: c._id || e._id,
+      code: c.code || 'COURSE',
+      title: c.title || 'Enrolled Operational Course',
+      subject: c.subject || 'Meteorology',
+      description: c.description || '',
+      difficulty: c.difficulty || 'Intermediate',
+      duration: c.duration || '30 hrs',
+      trainerName: c.trainerId?.name || 'Senior IMD Scientist',
+      trainerAvatar: c.trainerId?.avatarUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80',
+      thumbnail: c.thumbnailUrl || 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=800&q=80',
+      rating: 4.8,
+      enrolledCount: 42,
+      status: c.status || 'published',
+      progress: e.progressPercentage || 0,
+      competenciesCovered: c.competenciesCovered || [],
+      prerequisites: c.prerequisites || []
+    };
+  });
+
+  const pendingAssessments = dashboardData?.assessments || [];
+  const earnedCertificates = dashboardData?.certificates || [];
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-cyan-400" />
+        <span className="ml-3 text-sm text-slate-300">Loading Live Learner Portal Data...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -55,12 +111,16 @@ export const TraineeDashboardView: React.FC = () => {
             <div className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-950/80 px-4 py-2.5">
               <div>
                 <div className="text-[10px] uppercase font-semibold text-slate-400">Readiness Score</div>
-                <div className="text-xl font-bold text-cyan-400">{user?.readinessScore}%</div>
+                <div className="text-xl font-bold text-cyan-400">
+                  {dashboardData?.readinessScore ?? user?.readinessScore ?? 78}%
+                </div>
               </div>
               <div className="h-8 w-px bg-slate-800" />
               <div>
                 <div className="text-[10px] uppercase font-semibold text-slate-400">Profile Complete</div>
-                <div className="text-xl font-bold text-emerald-400">{user?.completionPercentage}%</div>
+                <div className="text-xl font-bold text-emerald-400">
+                  {dashboardData?.completionPercentage ?? user?.completionPercentage ?? 85}%
+                </div>
               </div>
             </div>
 
@@ -236,8 +296,8 @@ export const TraineeDashboardView: React.FC = () => {
             </div>
 
             <div className="space-y-3">
-              {MOCK_COMPETENCIES.slice(0, 4).map((comp) => (
-                <div key={comp.id} className="p-2.5 rounded-lg bg-slate-950/50 border border-slate-800/80">
+              {competencies.slice(0, 4).map((comp: any) => (
+                <div key={comp.id || comp._id} className="p-2.5 rounded-lg bg-slate-950/50 border border-slate-800/80">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold text-slate-200 truncate max-w-[170px]">{comp.name}</span>
                     <Badge variant={comp.gap > 0 ? 'amber' : 'emerald'}>
@@ -288,8 +348,8 @@ export const TraineeDashboardView: React.FC = () => {
               <span>Recent Operational Resources</span>
             </h4>
             <div className="space-y-2">
-              {MOCK_RESOURCES.slice(0, 2).map((r) => (
-                <div key={r.id} className="flex items-center justify-between p-2 rounded bg-slate-950/60 text-xs border border-slate-800">
+              {resources.slice(0, 2).map((r: any) => (
+                <div key={r.id || r._id} className="flex items-center justify-between p-2 rounded bg-slate-950/60 text-xs border border-slate-800">
                   <span className="truncate text-slate-300 max-w-[160px]">{r.title}</span>
                   <button
                     onClick={() => showToast(`Downloaded ${r.title}`)}

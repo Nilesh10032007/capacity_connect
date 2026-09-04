@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useApp } from '../../../context/AppContext';
 import { Badge } from '../../common/Badge';
@@ -15,15 +15,20 @@ import {
   CheckCircle,
   Tag
 } from 'lucide-react';
-import { MOCK_COMPETENCIES } from '../../../services/mockData';
+import { traineeService } from '../../../services/api/traineeService';
 
 export const TraineeProfileView: React.FC = () => {
   const { user, updateUser } = useAuth();
   const { showToast } = useApp();
 
+  const [competencies, setCompetencies] = useState<any[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [bio, setBio] = useState(user?.bio || '');
-  const [skills, setSkills] = useState(user?.skills.join(', ') || '');
+  const [skills, setSkills] = useState(user?.skills?.join(', ') || '');
+
+  useEffect(() => {
+    traineeService.getCompetencies().then(setCompetencies).catch(() => {});
+  }, []);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,7 +142,7 @@ export const TraineeProfileView: React.FC = () => {
           <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
             <h3 className="text-sm font-bold text-white mb-3">Verified Competency Level Matrix</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {MOCK_COMPETENCIES.slice(0, 4).map((c) => (
+              {competencies.slice(0, 4).map((c: any) => (
                 <div key={c.id} className="p-3 rounded-lg bg-slate-950 border border-slate-800 text-xs">
                   <div className="flex justify-between text-slate-200 font-semibold mb-1">
                     <span className="truncate max-w-[150px]">{c.name}</span>

@@ -3,11 +3,50 @@ import { fetchApi } from './apiClient';
 
 export const courseService = {
   async getCourses(): Promise<Course[]> {
-    return fetchApi('/courses');
+    const rawCourses = await fetchApi('/courses');
+    return rawCourses.map((c: any) => ({
+      id: c._id || c.id,
+      code: c.code,
+      title: c.title,
+      subject: c.subject,
+      description: c.description,
+      difficulty: c.difficulty,
+      duration: c.duration,
+      trainerName: c.trainerId?.name || 'Senior IMD Scientist',
+      trainerAvatar: c.trainerId?.avatarUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80',
+      thumbnail: c.thumbnailUrl || 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=800&q=80',
+      rating: 4.8,
+      enrolledCount: 34,
+      status: c.status,
+      progress: c.progress || 0,
+      competenciesCovered: c.competenciesCovered || [],
+      prerequisites: c.prerequisites || [],
+      modules: c.modules || []
+    }));
   },
 
   async getCourseById(id: string): Promise<Course | undefined> {
-    return fetchApi(`/courses/${id}`);
+    const c = await fetchApi(`/courses/${id}`);
+    if (!c) return undefined;
+    return {
+      id: c._id || c.id,
+      code: c.code,
+      title: c.title,
+      subject: c.subject,
+      description: c.description,
+      difficulty: c.difficulty,
+      duration: c.duration,
+      trainerName: c.trainerId?.name || 'Senior IMD Scientist',
+      trainerAvatar: c.trainerId?.avatarUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80',
+      thumbnail: c.thumbnailUrl || 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=800&q=80',
+      rating: 4.8,
+      enrolledCount: 34,
+      status: c.status,
+      progress: c.progress || 0,
+      competenciesCovered: c.competenciesCovered || [],
+      prerequisites: c.prerequisites || [],
+      modules: c.modules || []
+    };
   },
 
   async createCourse(newCourseData: Partial<Course>): Promise<Course> {
@@ -38,16 +77,79 @@ export const courseService = {
     });
   },
 
-  async getAssessments(): Promise<Assessment[]> {
-    return fetchApi('/assessments/me/pending'); // Mapping getAssessments to pending
+  // === ASSESSMENTS ===
+
+  // Get ALL assessments for logged-in trainee (pending + completed with scores)
+  async getAllMyAssessments(): Promise<any[]> {
+    return fetchApi('/assessments/me/all');
   },
 
-  async submitAssessmentScore(assessmentId: string, answers: any): Promise<any> {
+  // Get questions for a specific assessment (answers hidden)
+  async getAssessmentQuestions(assessmentId: string): Promise<any[]> {
+    return fetchApi(`/assessments/${assessmentId}/questions`);
+  },
+
+  // Submit assessment answers: { questionId: selectedOptionIndex }
+  async submitAssessment(assessmentId: string, answers: Record<string, number>): Promise<any> {
     return fetchApi(`/assessments/${assessmentId}/submit`, {
       method: 'POST',
       body: JSON.stringify({ answers })
     });
   },
+
+  // === TRAINER ASSESSMENTS ===
+
+  // Get all assessments created by this trainer
+  async getTrainerAssessments(): Promise<any[]> {
+    return fetchApi('/assessments/trainer/my');
+  },
+
+  // Get questions for an assessment (with correct answers, for editing)
+  async getTrainerAssessmentQuestions(assessmentId: string): Promise<any[]> {
+    return fetchApi(`/assessments/trainer/${assessmentId}/questions`);
+  },
+
+  // Create new assessment with questions
+  async createAssessment(data: {
+    courseId: string;
+    title: string;
+    durationMinutes: number;
+    passingScore: number;
+    difficulty: string;
+    dueDate?: string;
+    retakeAllowed: boolean;
+    questions: any[];
+  }): Promise<any> {
+    return fetchApi('/assessments/create', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  // AI-generate questions
+  async aiGenerateQuestions(data: { courseId?: string; assessmentId?: string; subject: string; competencyName: string }): Promise<any> {
+    return fetchApi('/assessments/ai-generate', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  // Update a single question
+  async updateQuestion(questionId: string, data: any): Promise<any> {
+    return fetchApi(`/assessments/questions/${questionId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  },
+
+  // Delete a question
+  async deleteQuestion(questionId: string): Promise<any> {
+    return fetchApi(`/assessments/questions/${questionId}`, {
+      method: 'DELETE'
+    });
+  },
+
+  // === CERTIFICATES ===
 
   async getCertificates(): Promise<Certificate[]> {
     return fetchApi('/certificates/me');

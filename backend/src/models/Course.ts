@@ -7,10 +7,12 @@ export interface ICourse extends Document {
   description: string;
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
   duration: string;
-  trainerId: mongoose.Types.ObjectId;
+  trainerId?: mongoose.Types.ObjectId;
+  trainerName?: string;
   thumbnailUrl?: string;
   status: 'draft' | 'pending_approval' | 'published';
   competenciesCovered: string[];
+  requiredLevel?: number;
   prerequisites: string[];
   createdAt: Date;
   updatedAt: Date;
@@ -24,10 +26,12 @@ const courseSchema = new Schema<ICourse>(
     description: { type: String, required: true },
     difficulty: { type: String, enum: ['Beginner', 'Intermediate', 'Advanced', 'Expert'], required: true },
     duration: { type: String, required: true },
-    trainerId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    trainerId: { type: Schema.Types.ObjectId, ref: 'User' },
+    trainerName: { type: String },
     thumbnailUrl: { type: String },
-    status: { type: String, enum: ['draft', 'pending_approval', 'published'], default: 'draft' },
+    status: { type: String, enum: ['draft', 'pending_approval', 'published'], default: 'published' },
     competenciesCovered: [{ type: String }],
+    requiredLevel: { type: Number, default: 4 },
     prerequisites: [{ type: String }],
   },
   { timestamps: true }

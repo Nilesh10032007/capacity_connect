@@ -14,8 +14,8 @@ const router = Router();
 router.get('/', authenticateToken, getCourses);
 router.get('/trainer/me', authenticateToken, requireRole('trainer'), getMyTrainerCourses);
 router.get('/:id', authenticateToken, getCourseById);
-router.post('/', authenticateToken, requireRole('trainer'), createCourse);
-router.put('/:id', authenticateToken, requireRole('trainer'), updateCourse);
+router.post('/', authenticateToken, createCourse);
+router.put('/:id', authenticateToken, updateCourse);
 router.patch('/:id/status', authenticateToken, requireRole('admin'), updateCourseStatus);
 
 export default router;

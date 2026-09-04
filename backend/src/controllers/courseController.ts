@@ -36,14 +36,60 @@ export const getMyTrainerCourses = async (req: AuthRequest, res: Response, next:
   }
 };
 
+import { Competency } from '../models/Competency';
+
 export const createCourse = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
+    const {
+      code,
+      title,
+      subject,
+      description,
+      difficulty,
+      duration,
+      trainerName,
+      competenciesCovered,
+      requiredLevel,
+      prerequisites,
+      thumbnailUrl
+    } = req.body;
+
+    const compsList = Array.isArray(competenciesCovered)
+      ? competenciesCovered
+      : competenciesCovered
+      ? [competenciesCovered]
+      : [subject];
+
     const newCourse = new Course({
-      ...req.body,
+      code: code || `CRS-${Math.floor(100 + Math.random() * 900)}`,
+      title,
+      subject,
+      description,
+      difficulty: difficulty || 'Intermediate',
+      duration: duration || '30 hrs',
       trainerId: req.user?.userId,
-      status: 'pending_approval' // default from UI
+      trainerName: trainerName || 'Senior IMD Instructor',
+      thumbnailUrl: thumbnailUrl || 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=800&q=80',
+      status: 'published',
+      competenciesCovered: compsList,
+      requiredLevel: Number(requiredLevel) || 4,
+      prerequisites: prerequisites || []
     });
+
     await newCourse.save();
+
+    // Ensure corresponding Competency exists in DB
+    for (const compName of compsList) {
+      const existing = await Competency.findOne({ name: compName });
+      if (!existing) {
+        await Competency.create({
+          name: compName,
+          category: subject || 'Meteorology',
+          description: `Core operational competency required for ${title}`
+        });
+      }
+    }
+
     res.status(201).json({ success: true, data: newCourse });
   } catch (error) {
     next(error);
