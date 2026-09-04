@@ -1,16 +1,16 @@
 import { Competency, SkillGapItem, HeatmapCell } from '../../types';
-import { MOCK_COMPETENCIES, MOCK_SKILL_GAPS, MOCK_HEATMAP_DATA } from '../mockData';
+import { fetchApi } from './apiClient';
 
 export const competencyService = {
   async getCompetencies(): Promise<Competency[]> {
-    return MOCK_COMPETENCIES;
+    return fetchApi('/trainees/me/competencies');
   },
 
   async getSkillGaps(): Promise<SkillGapItem[]> {
-    return MOCK_SKILL_GAPS;
+    return fetchApi('/trainees/me/skill-gaps');
   },
 
   async getCompetencyHeatmap(): Promise<HeatmapCell[]> {
-    return MOCK_HEATMAP_DATA;
+    return fetchApi('/admin/analytics/competency-heatmap');
   }
 };
